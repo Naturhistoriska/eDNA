@@ -4,7 +4,7 @@
 #' with default parameters.
 #' @param forward vector with file names for filtered forward reads
 #' @param reverse vector with file names for filtered reverse reads
-#' @param muthread Should the analysis use multithreads for analysis
+#' @param muThread Should the analysis use multithreads for analysis
 #'
 #' @return a matrix with count for all inferred sequence variants
 #' @import dada2
@@ -16,7 +16,7 @@
 #' package = "MetaBAnalysis")
 #' fastqR2 <- system.file("extdata", "exampleFq_R2.fastq.gz",
 #' package = "MetaBAnalysis")
-#' DadaAnalysis(fastqR1, fastqR2, muthread = FALSE)
+#' DadaAnalysis(fastqR1, fastqR2, muThread = FALSE)
 DadaAnalysis <- function(forward, reverse, muThread = TRUE,
   justConcatenate = FALSE) {
   errF <- dada2::learnErrors(forward, multithread = muThread)
@@ -58,8 +58,6 @@ DadaAnalysis <- function(forward, reverse, muThread = TRUE,
 #' @return seqTax a dataframe with annotation of results from sequence
 #' comparisons using blast. 
 #'
-#' @examples
-#' 
 
 BlastParse <- function(dgeList, blastRes) {  
   sequences <- data.frame(id = paste("Seq", 1:length(rownames(dgeList)), sep = "_"),

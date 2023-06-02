@@ -11,7 +11,7 @@ DadaAnalysis(forward, reverse, muThread = TRUE, justConcatenate = FALSE)
 
 \item{reverse}{vector with file names for filtered reverse reads}
 
-\item{muthread}{Should the analysis use multithreads for analysis}
+\item{muThread}{Should the analysis use multithreads for analysis}
 }
 \value{
 a matrix with count for all inferred sequence variants
@@ -25,5 +25,5 @@ fastqR1 <- system.file("extdata", "exampleFq_R1.fastq.gz",
 package = "MetaBAnalysis")
 fastqR2 <- system.file("extdata", "exampleFq_R2.fastq.gz",
 package = "MetaBAnalysis")
-DadaAnalysis(fastqR1, fastqR2, muthread = FALSE)
+DadaAnalysis(fastqR1, fastqR2, muThread = FALSE)
 }

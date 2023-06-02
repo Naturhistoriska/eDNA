@@ -28,6 +28,3 @@ the function relies on a online query to the NCBI taxonomic
 database. It hence also needs an active internet connection to
 work.
 }
-\examples{
-
-}
