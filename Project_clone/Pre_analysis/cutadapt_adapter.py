@@ -12,7 +12,7 @@ anchored_flag = "yes" #yes or no
 reverse_flag = "yes" #yes or no
 reads_folder = "../Raw_data" # Location of raw fastq-file
 write_folder = "../Filtered_data" # Location where trimmed reads will be written
-untrimmed_folder "../Untrimmed_data" # Location where untrimmed read will be written
+unfiltered_folder "../Unfiltered_data" # Location where untrimmed read will be written
 
 ###Main:
 
@@ -53,10 +53,10 @@ for file in os.listdir(reads_folder): #For every file in folder containing reads
                              write_folder + "/" + sample + "_outFwd_2.fastq.gz", 
                              write_folder + "/" + sample + "_outRev_1.fastq.gz", 
                              write_folder + "/" + sample + "_outRev_2.fastq.gz",
-                             untrimmed_folder + "/" + sample + "_untrimmedFwd_1.fastq.gz",
-                             untrimmed_folder + "/" + sample + "_untrimmedFwd_2.fastq.gz,
-                             untrimmed_folder + "/" + sample + "_untrimmedRev_1.fastq.gz",
-                             untrimmed_folder + "/" + sample + "_untrimmedRev_2.fastq.gz"]) #Create filtering names and store in a list
+                             unfiltered_folder + "/" + sample + "_unfilteredFwd_1.fastq.gz",
+                             unfiltered_folder + "/" + sample + "_unfilteredFwd_2.fastq.gz,
+                             unfiltered_folder + "/" + sample + "_unfilteredev_1.fastq.gz",
+                             unfiltered_folder + "/" + sample + "_unfilteredRev_2.fastq.gz"]) #Create filtering names and store in a list
 
         
         subprocess.run([f'cd {reads_folder} ; cutadapt -j 0 --max-n=0 --untrimmed-output {current_list[4]} --untrimmed-paired-output {current_list[5]} -g {regular_primer} -G {reverse_primer} -o {current_list[0]} -p {current_list[1]} {file} {file.replace(repl_from, repl_to)}'], shell=True) #Run cutadapt for regular direction
