@@ -14,11 +14,9 @@
 #' @export
 #'
 #' @examples
-#' fastqR1 <- system.file("extdata", "exampleFq_R1.fastq.gz",
-#' package = "MetaBAnalysis")
-#' fastqR2 <- system.file("extdata", "exampleFq_R2.fastq.gz",
-#' package = "MetaBAnalysis")
-#' DadaAnalysis(fastqR1, fastqR2, muThread = FALSE)
+#' filteredDataFolder <- system.file("extdata", package = "MetAlPipe")
+#' exampleCollectData <- CollectData(filteredDataFolder)
+#' DadaAnalysis(exampleCollectData, muThread = FALSE)
 #'
 DadaAnalysis <- function(primerData, muThread = TRUE, justConcatenate = FALSE, minOverlap = 5) {
   forward <- primerData$FiltFs
