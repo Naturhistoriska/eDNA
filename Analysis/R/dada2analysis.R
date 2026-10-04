@@ -6,7 +6,6 @@
 #' @param muThread Should the analysis use multithreads for analysis
 #' @param justConcatenate if reads pairs do not overlap set to TRUE
 #' @param minOverlap minimum overlap between reads when merging pairs
-#' @param paired if reads are paired-ended set to TRUE
 #'
 #' @return a matrix with count for all inferred sequence variants
 #' @import dada2
