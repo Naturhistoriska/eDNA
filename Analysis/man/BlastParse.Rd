@@ -16,8 +16,7 @@ BlastParse(
 \item{DGEList}{count data in the form of DGEList}
 
 \item{blastRes}{file with blast results assumes blastoutput option
--outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend
-sstart send evalue bitscore staxids sscinames scomnames qcovs"}
+-outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore staxids sscinames scomnames qcovs"}
 
 \item{minIdentity}{if identity percentage is below this value no hit will be reported, default = 90.}
 
@@ -53,4 +52,5 @@ yForward <- edgeR::DGEList(dfForward)
 exOut <- system.file("extdata", "test.out", package = "MetAlPipe")
 BlastParse(DGEList = yForward, blastRes = exOut)
 }
+
 }
