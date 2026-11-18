@@ -19,6 +19,7 @@ projId <- "XXX_202X"
 
 # Collect sample paths and names. Duplicate line once per primer:
 primer1 <- CollectData("../Filtered_data", prefix = "IBA")
+primer1 <- CollectData("./Project_clone/Filtered_data", prefix = "COI") # positron
 
 # Edit sample names:
 primer1$Samples
@@ -34,6 +35,54 @@ saveRDS(out, file = "out.rds")
 # Dereplicate and merge pairs with dada2:
 dada2Counts <- DadaAnalysis(primer1, justConcatenate = TRUE, minOverlap = 5)
 saveRDS(dada2Counts, file = "dada2Counts.rds")
+```
+
+### Identify and filter out NUMTs (experimental, use with caution):
+```{r}
+library(Biostrings)
+
+# TRUE if a contiguous sequence has at least one reading frame without stop codons
+HasOpenFrame <- function(x, gCodeId) {
+  geneticCode <- Biostrings::getGeneticCode(gCodeId)
+  any(vapply(1:3, function(i) {
+    len <- 3 * ((nchar(x) - i + 1) %/% 3) # length in full codons
+    if (len < 3) return(TRUE)
+    translatedAA <- Biostrings::translate(Biostrings::DNAString(substr(x, i, i + len - 1)), genetic.code = geneticCode, if.fuzzy.codon = "solve")
+    !grepl("*", as.character(translatedAA), fixed = TRUE)
+  }, logical(1)))
+}
+
+# Returns TRUE for sequences with stop codons in every frame (likely NUMTs).
+# Reads concatenated by dada2 (N-run spacer) are split and each part is checked separately,
+# since the reading frame is not preserved across the spacer.
+CheckSeqStops <- function(x, geneticCodeType = "invertebrate") {
+  gCodeId <- switch(geneticCodeType, invertebrate = "SGC4", vertebrate = "SGC1", stop("please select 'invertebrate' or 'vertebrate'"))
+  vapply(x, function(seq) {
+    parts <- strsplit(seq, "N+")[[1]]
+    parts <- parts[nchar(parts) > 0]
+    !all(vapply(parts, HasOpenFrame, logical(1), gCodeId = gCodeId)) # False if at least one piece has no open frame
+    }, logical(1), USE.NAMES = FALSE)
+}
+
+RemoveNUMTSequencesCOI <- function(countsObject, geneticCodeType = "invertebrate") {
+  isNumt <- CheckSeqStops(colnames(countsObject), geneticCodeType)
+  message(sum(isNumt), " of ", length(isNumt), " sequences flagged as NUMTs and dropped (", round(100 * sum(countsObject[, isNumt, drop = FALSE]) / sum(countsObject), 2), "% of reads)")
+  countsObject[, !isNumt, drop = FALSE]
+}
+
+dada2Counts <- RemoveNUMTSequencesCOI(dada2Counts, geneticCodeType = "invertebrate") # flag and remove NUMT sequences
+
+ZeroOutLowCounts <- function(countsObject, minimumReads = 5) {
+  lessThanThreshold <- countsObject > 0 & countsObject < minimumReads
+  message(sum(lessThanThreshold), " instances of sequences being zeroed out in individual samples.")
+  countsObject[lessThanThreshold] <- 0
+  message(sum(colSums(countsObject) > 0), " out of ", ncol(countsObject), " ASVs zeroed out completely and dropped.")
+  countsObject <- countsObject[, colSums(countsObject) > 0]
+  return(countsObject)
+}
+
+# dada2Counts <- readRDS("dada2Counts.rds")
+dada2Counts <- ZeroOutLowCounts(dada2Counts, minimumReads = 5) # zero out sequences within samples if they appear less than 5 times
 ```
 
 ### Convert and modify matrix "dada2Counts" to DGEList "yAll":

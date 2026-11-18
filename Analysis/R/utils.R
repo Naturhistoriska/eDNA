@@ -472,22 +472,23 @@ CurateHit <- function(ref, note = '', absorb = '', latin = '', common = '', rmHi
 #' This function filters read with low quality or containing N 
 #' with default parameters.
 #' @param primerData list containing information about samples to be run, can be generated with the function [CollectData].
+#' @param multiThreading boolean flag deciding if multithreading should be utilized or not.
 #'
 #' @return summary of sequence data as described in the Dada2 package
 #' @import dada2
 #'
 #' @export
 #'
-FiltTrimWrap <- function(primerData) {
+FiltTrimWrap <- function(primerData, multiThreading = FALSE) {
   if (length(primerData$Reverse) > 0) { # if paired-ended
     out <- dada2::filterAndTrim(primerData$Forward, primerData$FiltFs, 
                                 primerData$Reverse, primerData$FiltRs,
                                 maxN=0, truncQ=2, rm.phix=TRUE,
-                                compress=TRUE, multithread=TRUE)
+                                compress=TRUE, multithread=multiThreading)
   } else {
     out <- dada2::filterAndTrim(primerData$Forward, primerData$FiltFs, 
                                 maxN=0, truncQ=2, rm.phix=TRUE,
-                                compress=TRUE, multithread=TRUE)
+                                compress=TRUE, multithread=multiThreading)
   }
   rownames(out) <- primerData$Samples[match(rownames(out), primerData$ForwardC)]
   return(out)
