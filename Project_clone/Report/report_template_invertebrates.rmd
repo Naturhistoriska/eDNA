@@ -104,7 +104,7 @@ NATURHISTORISKA RIKSMUSEET • FORSKAR, BEVARAR OCH FÖRKLARAR • NRM.SE \\
 	%	Author name and information
 	%------------------------------------------------
 	\center
-	\includegraphics[width=0.9\textwidth]{./NRM_figures/nrm-logo-staende-svensk-fullfarg.pdf}
+	\includegraphics[width=0.4\textwidth]{./NRM_figures/nrm-logo-staende-svensk-fullfarg.pdf}
 	\vspace{2cm}
 	%\parbox[t]{0.93\textwidth}{ % Box to inset this section slightly
 	%	\raggedleft % Right align the text
@@ -151,14 +151,9 @@ primerSeqs <- sampleMetaData$primerSeqs
 groupSeqs98 <- sampleMetaData$groupSeqs98
 groupSeqs85 <- sampleMetaData$groupSeqs85
 groupResults <- readRDS("allResultsInv.rds")
-groupSpecies <- groupResults$Species
-groupGenera <- groupResults$Genera
-groupFamilies <- groupResults$Families
-groupOrders <- groupResults$Orders
+groupSpecies <- groupResults$Species # the only taxonomic source used in this report
 
-groupSpecies <- sortColsNumerically(groupSpecies, skipCols = c(1:10))
-groupGenera <- sortColsNumerically(groupGenera, skipCols = c(1:7))
-groupOrders <- sortColsNumerically(groupOrders, skipCols = c(1:5))
+groupSpecies <- sortColsNumerically(groupSpecies, skipCols = c(1:9))
 
 # groupData <- cbind(groupData[, c(1, 2)], groupData[, -c(1, 2)][, order(as.numeric(gsub("[^0-9]+", "", colnames(groupData)[-c(1, 2)])))])
 # groupSpecies <- cbind(groupData$Latin, groupData$Swedish)
@@ -169,15 +164,14 @@ groupOrders <- sortColsNumerically(groupOrders, skipCols = c(1:5))
 
 # add a settings file and generate everything outside of this document?
 
-groupGenera <- groupGenera[!(groupGenera$Genus == "unknown"), ]
-groupFamilies <- groupFamilies[!(groupFamilies$Family == "unknown"), ]
-groupOrders <- groupOrders[!(groupOrders$Order == "unknown"), ]
+# Number of distinct taxa at each rank, ignoring unassigned ("unknown"/NA) ranks
+CountRank <- function(x) length(unique(x[!is.na(x) & x != "unknown"]))
 
-# Assign variables:
+# Assign variables (all derived from groupSpecies):
 speciesNo <- nrow(groupSpecies) # Number of species found with first primer
-genusNo <- nrow(groupGenera) # Number of species found with first primer
-familyNo <- nrow(groupFamilies) # Number of species found with first primer
-orderNo <- nrow(groupOrders) # Number of species found with first primer
+genusNo <- CountRank(groupSpecies$Genus)
+familyNo <- CountRank(groupSpecies$Family)
+orderNo <- CountRank(groupSpecies$Order)
 totalSeqs <- FixMillion(sum(rawSeqs)) # Total number of raw sequences
 minSeqs <- FixMillion(min(rawSeqs)) # Number of sequences in the sample with fewest sequences
 maxSeqs <- FixMillion(max(rawSeqs)) # Number of sequences in the sample with most sequences
@@ -265,7 +259,7 @@ Se tabell 2 för sammanfattning över samtliga identifierade ordningar av `r tar
 # lägg till klass
 
 # Summary per order: taxonomic richness, detection frequency and read share
-sampleCols <- groupSpecies[, -c(1:10), drop = FALSE]
+sampleCols <- groupSpecies[, -c(1:9), drop = FALSE]
 totalReads <- sum(sampleCols)
 
 # split(seq_len(nrow(groupSpecies)), groupSpecies$Order) to group lines by order
@@ -298,12 +292,20 @@ kable(orderSummary, "latex", row.names = FALSE,
 
 ```{r orderPalette, include=FALSE}
 # One fixed colour per order (alphabetical assignment) shared by all figures
-allOrders <- sort(unique(na.omit(c(groupSpecies$Order, groupGenera$Order, groupOrders$Order))))
+allOrders <- sort(unique(na.omit(groupSpecies$Order)))
 # orderPalette <- setNames(rep_len(MetAlPipe:::color25, length(allOrders)), allOrders)
 orderPalette <- setNames(MetAlPipe:::color25[1:length(allOrders)], allOrders)
 ```
 
-```{r fig1, fig.height=8.5, fig.width=6.7, echo=FALSE, fig.cap=paste0("Fördelning i procent av antal sekvenser från olika ordningar av ", targetGroup, " i proverna detekterade med hjälp av primer ", primerName1, ". Den översta stapeln \'Totalt\' visar en sammanslagning av alla dessa sekvenser från alla prover.")}
+```{r}
+if(ncol(groupSpecies) > 8) {
+  figHeight <- 4
+} else {
+  figHeight <- 8.5
+}
+```
+
+```{r fig1, fig.height=figHeight, fig.width=6.7, echo=FALSE, fig.cap=paste0("Fördelning i procent av antal sekvenser från olika ordningar av ", targetGroup, " i proverna detekterade med hjälp av primer ", primerName1, ". Den översta stapeln \'Totalt\' visar en sammanslagning av alla dessa sekvenser från alla prover.")}
 # simplify and add a flag for species/genera/families/orders. Set orders as default. Look at PCA and diversity plots etc next time.
 
 # This plot does not correspond with tab2
@@ -323,34 +325,38 @@ FractionPlotGG <- function(data, species, col) {
     scale_x_continuous(expand = expansion(mult = c(0, 0.02))) +
     labs(x = "Andel (%)", y = NULL) +
     theme_minimal(base_size = 10) +
-    theme(panel.grid.major.y = element_blank(), legend.position = "right",
-          axis.text.y = element_text(size = 6, face = "bold"))
+    theme(panel.grid.major.y = element_blank(), legend.position = "bottom",
+    # theme(panel.grid.major.y = element_blank(), legend.position = "right",
+          axis.text.y = element_text(size = 9, face = "bold"))
 }
 
 
 # if figure is too tall or short, change to either fig.height=7 or fig.height=14 on above line
 library(MetAlPipe)
 
-# Prepare the count data:
-# groupCounts <- groupGenera[, -c(1:7), drop = FALSE]
-groupCounts <- groupOrders[, -c(1:5), drop = FALSE]
-# groupCounts <- groupSpecies[, -c(1:10), drop = FALSE] # this has a different filtering parameter on ID
-groupCounts <- groupCounts[, rev(seq_along(groupCounts))] # reverse order of samples
+# Prepare the count data: sequences per order, summed from the species table
+speciesCounts <- groupSpecies[, -c(1:9), drop = FALSE]
+
+# knownOrder <- !is.na(groupSpecies$Order) & groupSpecies$Order != "unknown" # if unknowns are undesired
+knownOrder <- !is.na(groupSpecies$Order) # take a boolean of all non NA orders
+
+groupCounts <- rowsum(speciesCounts[knownOrder, , drop = FALSE], groupSpecies$Order[knownOrder]) # group rowsums based on orders
+groupCounts <- as.data.frame(groupCounts[order(-rowSums(groupCounts)), , drop = FALSE])
+orderNames <- rownames(groupCounts)
+groupCounts <- groupCounts[, rev(seq_along(groupCounts)), drop = FALSE] # reverse order of samples
 if(ncol(groupCounts) > 1) { # if more than one sample, add a total of all samples to the plot
   groupCounts <- cbind(Totalt = rowSums(groupCounts), groupCounts)
 }
 
 # Plot:
-# FractionPlot(data = groupCounts, species = groupOrders$Order, col = MetAlPipe:::color25, inset = c(-0.3, 0.01))
-FractionPlotGG(groupCounts, groupOrders$Order, orderPalette)
-# FractionPlotGG(groupCounts, groupSpecies$Order, orderPalette) # this has a different filtering parameter on ID
+FractionPlotGG(groupCounts, orderNames, orderPalette)
 
 ```
 
-```{r fig2, echo=FALSE, fig.height=8.5, fig.width=6.7, fig.cap=paste0("Mångfald av ", targetGroup, " i varje prov, beräknad på samtliga identifierade taxa. Vänster: antal detekterade taxa, uppdelat på ordning. Mitten: Shannons diversitetsindex (H'). Höger: Simpsons diversitetsindex (1 - D). Ett högre diversitetsindex indikerar större mångfald i det provet. Indexen bygger på antal sekvenser och bör ses som semikvantitativa då metabarcodingdata har en koppling men ej ett 1:1-förhållande till biomassa.")}
+```{r fig2, echo=FALSE, fig.height=figHeight, fig.width=6.7, fig.cap=paste0("Mångfald av ", targetGroup, " i varje prov, beräknad på samtliga identifierade taxa. Vänster: antal detekterade taxa, uppdelat på ordning. Mitten: Shannons diversitetsindex (H'). Höger: Simpsons diversitetsindex (1 - D). Ett högre diversitetsindex indikerar större mångfald i det provet. Indexen bygger på antal sekvenser och bör ses som semikvantitativa då metabarcodingdata har en koppling men ej ett 1:1-förhållande till biomassa.")}
 library(ggplot2)
 
-speciesCounts <- groupSpecies[, -c(1:10), drop = FALSE]
+speciesCounts <- groupSpecies[, -c(1:9), drop = FALSE]
 
 sampleLevels <- colnames(speciesCounts)
 sampleLevels <- sampleLevels[order(suppressWarnings(as.numeric(gsub("\\D", "", sampleLevels))), sampleLevels)]
@@ -416,7 +422,7 @@ if(nrow(groupSpecies) >= 60) { # if there are more than 60 taxa in species resul
 ```{r fig3, echo=FALSE, fig.height=8.5, fig.width=6.7, fig.cap=paste0("Relativ förekomst av ", nTopString, "taxa av ", targetGroup, " över alla prover. Färgen visar andelen av provets sekvenser (log10-skala, grå = ej detekterad). Taxa är grupperade efter ordning och sorterade efter totalt antal sekvenser.")}
 library(ggplot2)
 
-speciesCounts <- groupSpecies[, -c(1:10), drop = FALSE]
+speciesCounts <- groupSpecies[, -c(1:9), drop = FALSE]
 
 # Percent of each sample's sequences (all taxa) so values are comparable across samples
 speciesPct <- sweep(as.matrix(speciesCounts), 2, colSums(speciesCounts), "/") * 100
@@ -459,17 +465,25 @@ ggplot(heatData, aes(x = Prov, y = Taxon)) +
         legend.position = "bottom")
 ```
 
-```{r fig_nmds, echo=FALSE, results="hide", fig.height=4.5, fig.width=6.7, fig.cap=paste0("Likhet mellan prover i artsammansättning av ", targetGroup, ", visualiserad med NMDS (Non-metric MultiDimensional Scaling). Närliggande prover har liknande sammansättning. Vänster: Bray-Curtis-avstånd baserat på antal sekvenser. Höger: Jaccard-avstånd baserat på närvaro/frånvaro av arter. Ett lägre stressvärde innebär bättre överensstämmelse mellan avstånd i diagram och i ursprungligt data; värden under cirka 0,2 anses acceptabla. Färgen visar provets Shannon-diversitetsindex, där en högre siffra indikerar högre mångfald i det provet.")}
-library(ggplot2)
-
-speciesCounts <- groupSpecies[, -c(1:10), drop = FALSE]
+```{r nmds_setup, include=FALSE}
+speciesCounts <- groupSpecies[, -c(1:9), drop = FALSE]
 comm <- t(as.matrix(speciesCounts)) # samples in rows, taxa in columns
+
+shannon <- apply(speciesCounts, 2, function(x) { p <- x[x > 0] / sum(x); -sum(p * log(p)) })
+
+# NMDS with k = 2 needs at least 2k + 1 samples to be meaningful
+minSamplesNmds <- 5
+enoughForNmds <- nrow(comm) >= minSamplesNmds
+fewSamples <- !enoughForNmds && nrow(comm) >= 2
+```
+
+```{r fig_nmds, eval=enoughForNmds, echo=FALSE, results=FALSE, message=FALSE, fig.height=4.5, fig.width=6.7, fig.cap=paste0("Likhet mellan prover i artsammansättning av ", targetGroup, ", visualiserad med NMDS (Non-metric MultiDimensional Scaling). Närliggande prover har liknande sammansättning. Vänster: Bray-Curtis-avstånd baserat på antal sekvenser. Höger: Jaccard-avstånd baserat på närvaro/frånvaro av arter. Ett lägre stressvärde innebär bättre överensstämmelse mellan avstånd i diagram och i ursprungligt data; värden under cirka 0,2 anses acceptabla. Färgen visar provets Shannon-diversitetsindex, där en högre siffra indikerar högre mångfald i det provet.")}
+library(ggplot2)
 
 set.seed(6317)
 ndBray <- vegan::metaMDS(comm, distance = "bray", k = 2, trymax = 50, trace = 0)
 ndJac <- vegan::metaMDS(comm, distance = "jaccard", binary = TRUE, k = 2, trymax = 50, trace = 0)
 
-shannon <- apply(speciesCounts, 2, function(x) { p <- x[x > 0] / sum(x); -sum(p * log(p)) })
 nmdsData <- rbind(
   data.frame(Prov = rownames(comm), vegan::scores(ndBray, display = "sites"),
              Metod = sprintf("Bray-Curtis (antal sekvenser), stress = %.2f", ndBray$stress),
@@ -491,10 +505,37 @@ ggplot(nmdsData, aes(x = NMDS1, y = NMDS2, colour = Shannon)) +
   theme(strip.text = element_text(face = "bold", size = 8), legend.position = "bottom")
 ```
 
-```{r fig_accum, echo=FALSE, results="hide", fig.height=3.5, fig.width=6.7, fig.cap=paste0("A: Kumulativt antal taxa av ", targetGroup, " när fler prover läggs till (medelvärde av 100 slumpade provordningar, skuggat område visar standardavvikelsen). En kurva som planar ut tyder på att fler prover skulle ge få nya taxa medan en stigande kurva indikerar att mer prover tagna skulle leda till fler identifierade taxa. B: Antal detekterade taxa i varje prov i förhållande till antal sekvenser i provet. Ett mer linjärt förhållande indikerar att skillnader mellan prover kan förklaras med hjälp av sekvenseringsdjupsskillnader.")}
+```{r fig_dist_few, eval=fewSamples, echo=FALSE, results="hide", fig.height=3.5, fig.width=6.7, fig.cap=paste0("Likhet mellan prover i artsammansättning av ", targetGroup, ". Parvisa distanser illustreras, där värdet går från 0 (identisk sammansättning) till 1 (inga gemensamma arter). Vänster: Bray-Curtis-avstånd baserat på antal sekvenser. Höger: Jaccard-avstånd baserat på närvaro/frånvaro av arter.")}
+library(ggplot2)
+
+distLong <- function(d, metod) {
+  m <- as.matrix(d)
+  data.frame(Prov1 = factor(rep(rownames(m), times = ncol(m)), levels = rownames(m)),
+             Prov2 = factor(rep(colnames(m), each = nrow(m)), levels = rev(rownames(m))),
+             Avstand = as.vector(m), Metod = metod)
+}
+
+distData <- rbind(
+  distLong(vegan::vegdist(comm, method = "bray"), "Bray-Curtis (antal sekvenser)"),
+  distLong(vegan::vegdist(comm, method = "jaccard", binary = TRUE), "Jaccard (närvaro/frånvaro)")
+)
+
+ggplot(distData, aes(x = Prov1, y = Prov2, fill = Avstand)) +
+  geom_tile(colour = "white") +
+  geom_text(aes(label = sprintf("%.2f", Avstand)), size = 2.5) +
+  facet_wrap(~ Metod) +
+  scale_fill_gradientn(colors = wesanderson::wes_palette("Zissou1")[1:4], limits = c(0, 1), name = "Avstånd") +
+  labs(x = NULL, y = NULL) +
+  theme_minimal(base_size = 8) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        strip.text = element_text(face = "bold", size = 8), legend.position = "bottom",
+        panel.grid = element_blank())
+```
+
+```{r fig_accum, echo=FALSE, results=FALSE, message=FALSE, fig.height=3.5, fig.width=6.7, fig.cap=paste0("A: Kumulativt antal taxa av ", targetGroup, " när fler prover läggs till (medelvärde av 100 slumpade provordningar, skuggat område visar standardavvikelsen). En kurva som planar ut tyder på att fler prover skulle ge få nya taxa medan en stigande kurva indikerar att mer prover tagna skulle leda till fler identifierade taxa. B: Antal detekterade taxa i varje prov i förhållande till antal sekvenser i provet. Ett mer linjärt förhållande indikerar att skillnader mellan prover kan förklaras med hjälp av sekvenseringsdjupsskillnader.")}
 set.seed(6317)
 # samples are added in random order 100 times. The line is the average and the grey band is one standard deviation. If the curve flattens additional samples add little. If it is climbing steeply not all diversity is captured. Total 291 should be viewed as a minimum in this case. Shows how complete the survey is, supports that a negative result does not prove absence. "Did you sample enough"
-acc <- vegan::specaccum(comm > 0, method = "random", permutations = 100)
+acc <- vegan::specaccum(comm > 0, method = "random", permutations = 100, )
 accData <- data.frame(Prov = acc$sites, Taxa = acc$richness,
                       Lo = acc$richness - acc$sd, Hi = acc$richness + acc$sd)
 
